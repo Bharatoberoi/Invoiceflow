@@ -422,6 +422,8 @@ if __name__ == '__main__':
     else:
         print(f"[WARNING] Resources failed to load: {resources_error}")
     
-    print("[INFO] Starting Flask server on http://localhost:5000")
-    print("[INFO] Open http://localhost:5000 in your browser")
-    app.run(debug=False, host='0.0.0.0', port=5000)
+    # Get port from environment variable or default to 5000
+    port = int(os.environ.get('PORT', 5000))
+    print(f"[INFO] Starting Flask server on http://localhost:{port}")
+    print(f"[INFO] Open http://localhost:{port} in your browser")
+    app.run(debug=False, host='0.0.0.0', port=port)
