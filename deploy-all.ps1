@@ -17,25 +17,25 @@ $Red = [System.ConsoleColor]::Red
 function Write-Header {
     param([string]$Text)
     Write-Host ""
-    Write-Host "╔═══════════════════════════════════════════════════════╗" -ForegroundColor $Cyan
-    Write-Host "║ $Text" -ForegroundColor $Cyan
-    Write-Host "╚═══════════════════════════════════════════════════════╝" -ForegroundColor $Cyan
+    Write-Host "=====================================================" -ForegroundColor $Cyan
+    Write-Host " $Text" -ForegroundColor $Cyan
+    Write-Host "=====================================================" -ForegroundColor $Cyan
     Write-Host ""
 }
 
 function Write-Success {
     param([string]$Text)
-    Write-Host "✅ $Text" -ForegroundColor $Green
+    Write-Host "[OK] $Text" -ForegroundColor $Green
 }
 
 function Write-Warning {
     param([string]$Text)
-    Write-Host "⚠️  $Text" -ForegroundColor $Yellow
+    Write-Host "[WARNING] $Text" -ForegroundColor $Yellow
 }
 
-function Write-Error {
+function Write-ErrorMsg {
     param([string]$Text)
-    Write-Host "❌ $Text" -ForegroundColor $Red
+    Write-Host "[ERROR] $Text" -ForegroundColor $Red
 }
 
 function Test-Prerequisites {
@@ -47,7 +47,7 @@ function Test-Prerequisites {
     if (Get-Command git -ErrorAction SilentlyContinue) {
         Write-Success "Git is installed"
     } else {
-        Write-Error "Git is not installed. Please install Git first."
+        Write-ErrorMsg "Git is not installed. Please install Git first."
         $all_good = $false
     }
     
@@ -55,7 +55,7 @@ function Test-Prerequisites {
     if (Get-Command gcloud -ErrorAction SilentlyContinue) {
         Write-Success "Google Cloud SDK is installed"
     } else {
-        Write-Error "Google Cloud SDK is not installed. Download from https://cloud.google.com/sdk/docs/install"
+        Write-ErrorMsg "Google Cloud SDK is not installed. Download from https://cloud.google.com/sdk/docs/install"
         $all_good = $false
     }
     
@@ -63,12 +63,12 @@ function Test-Prerequisites {
     if (Test-Path "c:\Users\HP\OneDrive\Desktop\projects\Langraph_chatbot\server.py") {
         Write-Success "Project directory found"
     } else {
-        Write-Error "Project directory not found"
+        Write-ErrorMsg "Project directory not found"
         $all_good = $false
     }
     
     if (-not $all_good) {
-        Write-Error "Prerequisites not met. Please install missing tools and try again."
+        Write-ErrorMsg "Prerequisites not met. Please install missing tools and try again."
         exit 1
     }
     
@@ -81,8 +81,15 @@ function Get-UserInput {
     if (-not $GitHubUsername) {
         $GitHubUsername = Read-Host "Enter your GitHub username"
     }
+    
+    # Auto-detect GCP project from gcloud config
     if (-not $ProjectId) {
-        $ProjectId = Read-Host "Enter your Google Cloud Project ID"
+        $ProjectId = gcloud config get-value project 2>$null
+        if ($ProjectId) {
+            Write-Success "Auto-detected GCP Project: $ProjectId"
+        } else {
+            $ProjectId = Read-Host "Enter your Google Cloud Project ID"
+        }
     }
     
     Write-Host ""
@@ -95,7 +102,7 @@ function Get-UserInput {
     
     $confirm = Read-Host "Is this correct? (y/n)"
     if ($confirm -ne "y") {
-        Write-Error "Deployment cancelled"
+        Write-ErrorMsg "Deployment cancelled"
         exit 1
     }
 }
@@ -110,17 +117,17 @@ function Push-ToGitHub {
         $existing_remote = git remote get-url origin 2>$null
         if ($existing_remote) {
             Write-Warning "Remote already exists: $existing_remote"
-            Write-Warning "Removing existing remote..."
-            git remote remove origin
+            Write-Warning "Skipping git remote configuration (already set)"
         }
-        
-        $RepoUrl = "https://github.com/$GitHubUsername/invoiceflow.git"
-        
-        Write-Host "Adding remote: $RepoUrl"
-        git remote add origin $RepoUrl
-        
-        Write-Host "Configuring branch..."
-        git branch -M main
+        else {
+            $RepoUrl = "https://github.com/$GitHubUsername/invoiceflow.git"
+            
+            Write-Host "Adding remote: $RepoUrl"
+            git remote add origin $RepoUrl
+            
+            Write-Host "Configuring branch..."
+            git branch -M main
+        }
         
         Write-Host "Pushing to GitHub..."
         git push -u origin main
@@ -129,7 +136,7 @@ function Push-ToGitHub {
         Write-Host "Repository URL: https://github.com/$GitHubUsername/invoiceflow" -ForegroundColor $Cyan
         
     } catch {
-        Write-Error "Failed to push to GitHub: $_"
+        Write-ErrorMsg "Failed to push to GitHub: $_"
         exit 1
     }
 }
@@ -168,7 +175,7 @@ function Deploy-ToCloudRun {
         Write-Host "Region: $Region" -ForegroundColor $Cyan
         
     } catch {
-        Write-Error "Deployment failed: $_"
+        Write-ErrorMsg "Deployment failed: $_"
         exit 1
     }
 }
@@ -201,10 +208,10 @@ function Show-NextSteps {
 
 # Main execution
 Write-Host ""
-Write-Host "╔════════════════════════════════════════════════════════════╗" -ForegroundColor $Green
-Write-Host "║  🚀 InvoiceFlow - Automated Deployment Script             ║" -ForegroundColor $Green
-Write-Host "║  GitHub + Google Cloud Run                                ║" -ForegroundColor $Green
-Write-Host "╚════════════════════════════════════════════════════════════╝" -ForegroundColor $Green
+Write-Host "====================================================" -ForegroundColor $Green
+Write-Host " INVOICEFLOW - AUTOMATED DEPLOYMENT SCRIPT" -ForegroundColor $Green
+Write-Host " GitHub + Google Cloud Run" -ForegroundColor $Green
+Write-Host "====================================================" -ForegroundColor $Green
 
 # Execute deployment steps
 Test-Prerequisites
@@ -212,6 +219,3 @@ Get-UserInput
 Push-ToGitHub
 Deploy-ToCloudRun
 Show-NextSteps
-
-Write-Header "DEPLOYMENT COMPLETE!"
-Write-Success "Your InvoiceFlow application is now live! 🎉"

@@ -426,18 +426,19 @@
                 if (isServerReady) {
                     statusEl.textContent = 'Ready';
                     statusEl.style.color = '#4caf50';
-                    document.getElementById('sendBtn').disabled = false;
-                    document.getElementById('messageInput').disabled = false;
                 } else {
                     statusEl.textContent = 'Initializing models...';
                     statusEl.style.color = '#ff9800';
-                    document.getElementById('sendBtn').disabled = true;
-                    document.getElementById('messageInput').disabled = true;
+                    // Keep input enabled so users can try sending
+                    document.getElementById('sendBtn').disabled = false;
+                    document.getElementById('messageInput').disabled = false;
                     // Check again in 2 seconds
                     setTimeout(checkServerHealth, 2000);
                 }
             } catch (error) {
                 document.getElementById('connectionStatus').textContent = 'Connection error';
+                document.getElementById('sendBtn').disabled = false;
+                document.getElementById('messageInput').disabled = false;
                 setTimeout(checkServerHealth, 2000);
             }
         }
@@ -451,12 +452,17 @@
         }
 
         async function sendMessage() {
-            if (!isServerReady || isLoading) return;
+            if (isLoading) return;
             
             const input = document.getElementById('messageInput');
             const message = input.value.trim();
 
             if (!message) return;
+
+            if (!isServerReady) {
+                addMessage('Server is still initializing. Please try again in a moment.', 'assistant');
+                return;
+            }
 
             // Clear input
             input.value = '';

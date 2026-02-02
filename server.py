@@ -332,6 +332,8 @@ conversation_state = {"messages": [], "query_type": None}
 @app.route('/api/health', methods=['GET'])
 def health():
     """Health check endpoint"""
+    if not resources_ready and not resources_error:
+        init_resources()
     return jsonify({
         'status': 'ok' if resources_ready else 'initializing',
         'ready': resources_ready,
